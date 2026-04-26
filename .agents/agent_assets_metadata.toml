@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "fcJZHfpIi4xvsUWaF5brj"
+uri = "file://artifacts/akin-ai/assets/images/icon.png"
+type = "image"
+title = "akinai app icon"

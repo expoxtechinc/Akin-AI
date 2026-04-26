@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/api-spec run codegen && pnpm --filter @workspace/akin-ai run build:web",
+  "outputDirectory": "artifacts/akin-ai/dist",
+  "functions": {
+    "api/*.ts": {
+      "runtime": "@vercel/node@5.1.10"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ]
+}

@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: AkinAI API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: chat
+    description: AI chat with Gemini
+  - name: scholarships
+    description: Scholarship listings
+  - name: inspire
+    description: Daily inspiration content
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /chat:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a chat message
+      description: Sends a chat message to AkinAI (Gemini-powered) and returns the assistant's reply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Chat reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+  /scholarships:
+    get:
+      operationId: listScholarships
+      tags: [scholarships]
+      summary: List scholarships
+      description: Returns curated scholarship opportunities sourced from ScholarshipTab and other public listings.
+      responses:
+        "200":
+          description: Scholarship list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScholarshipList"
+  /inspire:
+    get:
+      operationId: getInspiration
+      tags: [inspire]
+      summary: Get a daily inspiration bundle
+      description: Returns a daily quote, study tip, and small action prompts.
+      responses:
+        "200":
+          description: Inspiration bundle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspirationBundle"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+      required:
+        - role
+        - content
+    ChatRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+      required:
+        - messages
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        model:
+          type: string
+      required:
+        - reply
+        - model
+    Scholarship:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        organization:
+          type: string
+        location:
+          type: string
+        level:
+          type: string
+        deadline:
+          type: string
+        amount:
+          type: string
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - title
+        - organization
+        - location
+        - level
+        - deadline
+        - url
+        - tags
+    ScholarshipList:
+      type: object
+      properties:
+        source:
+          type: string
+        sourceUrl:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scholarship"
+      required:
+        - source
+        - sourceUrl
+        - items
+    Inspiration:
+      type: object
+      properties:
+        quote:
+          type: string
+        author:
+          type: string
+      required:
+        - quote
+        - author
+    StudyTip:
+      type: object
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+      required:
+        - title
+        - body
+    ActionPrompt:
+      type: object
+      properties:
+        title:
+          type: string
+        prompt:
+          type: string
+      required:
+        - title
+        - prompt
+    InspirationBundle:
+      type: object
+      properties:
+        quote:
+          $ref: "#/components/schemas/Inspiration"
+        tip:
+          $ref: "#/components/schemas/StudyTip"
+        prompts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionPrompt"
+      required:
+        - quote
+        - tip
+        - prompts
