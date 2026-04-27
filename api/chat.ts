@@ -1,5 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-
 const MODEL = "gemini-flash-latest";
 
 const SYSTEM_PROMPT = `You are AkinAI, a warm, encouraging, and intelligent assistant created by Akin S. Sokpah from Liberia. You are powered by Google's Gemini model via Google AI Studio.
@@ -14,65 +12,61 @@ Your personality:
 
 type Msg = { role: "system" | "user" | "assistant"; content: string };
 
-async function readJson(req: IncomingMessage): Promise<unknown> {
-  return await new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", (c) => (data += c));
-    req.on("end", () => {
-      try {
-        resolve(data ? JSON.parse(data) : {});
-      } catch (e) {
-        reject(e);
-      }
-    });
-    req.on("error", reject);
-  });
+async function readBody(req: any): Promise<any> {
+  if (req.body && typeof req.body === "object") return req.body;
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
+  const raw = Buffer.concat(chunks).toString("utf8");
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 }
 
-export default async function handler(
-  req: IncomingMessage & { body?: unknown; method?: string },
-  res: ServerResponse & { status: (n: number) => any; json: (b: unknown) => void },
-) {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
-    return;
-  }
-
-  let body: { messages?: Msg[] } = {};
+export default async function handler(req: any, res: any) {
   try {
-    body = (req.body as { messages?: Msg[] }) ?? (await readJson(req)) as { messages?: Msg[] };
-  } catch {
-    res.status(400).json({ error: "Invalid JSON body" });
-    return;
-  }
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
 
-  const messages = Array.isArray(body.messages) ? body.messages : [];
-  if (messages.length === 0) {
-    res.status(400).json({ error: "messages array required" });
-    return;
-  }
+    const body = await readBody(req);
+    const messages: Msg[] = Array.isArray(body?.messages) ? body.messages : [];
+    if (messages.length === 0) {
+      res.status(400).json({ error: "messages array required" });
+      return;
+    }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({
-      error:
-        "GEMINI_API_KEY is not configured. Add it in Vercel Project Settings > Environment Variables.",
-    });
-    return;
-  }
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      res.status(500).json({
+        error:
+          "GEMINI_API_KEY is not configured. Add it in Vercel Project Settings > Environment Variables, then redeploy.",
+      });
+      return;
+    }
 
-  const contents = messages
-    .filter((m) => m.role !== "system")
-    .map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const contents = messages
+      .filter((m) => m && m.role !== "system" && typeof m.content === "string")
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(
-    apiKey,
-  )}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(
+      apiKey,
+    )}`;
 
-  try {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,17 +86,15 @@ export default async function handler(
       console.error("Gemini error", response.status, text);
       res.status(502).json({
         error: `Gemini API error (${response.status}). Check your API key and quota at https://aistudio.google.com/app/api-keys`,
+        detail: text.slice(0, 500),
       });
       return;
     }
 
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-
-    const reply =
-      data.candidates?.[0]?.content?.parts
-        ?.map((p) => p.text ?? "")
+    const data: any = await response.json();
+    const reply: string =
+      data?.candidates?.[0]?.content?.parts
+        ?.map((p: any) => p?.text ?? "")
         .join("")
         .trim() ?? "";
 
@@ -110,8 +102,11 @@ export default async function handler(
       reply: reply || "I am here. Could you rephrase your question?",
       model: MODEL,
     });
-  } catch (err) {
-    console.error("Failed to call Gemini", err);
-    res.status(500).json({ error: "Failed to reach Gemini" });
+  } catch (err: any) {
+    console.error("AkinAI chat handler crashed", err);
+    res.status(500).json({
+      error: "Chat handler failed",
+      detail: String(err?.message || err),
+    });
   }
 }

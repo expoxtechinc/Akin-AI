@@ -1,5 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-
 const QUOTES = [
   { quote: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
   { quote: "Education is the most powerful weapon which you can use to change the world.", author: "Nelson Mandela" },
@@ -47,10 +45,7 @@ function pickN<T>(arr: T[], n: number): T[] {
   return out;
 }
 
-export default function handler(
-  _req: IncomingMessage,
-  res: ServerResponse & { status: (n: number) => any; json: (b: unknown) => void },
-) {
+export default function handler(_req: any, res: any) {
   res.status(200).json({
     quote: pick(QUOTES),
     tip: pick(TIPS),

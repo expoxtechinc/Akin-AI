@@ -1,5 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-
 const SCHOLARSHIPS = [
   {
     id: "mastercard-foundation",
@@ -135,10 +133,7 @@ const SCHOLARSHIPS = [
   },
 ];
 
-export default function handler(
-  _req: IncomingMessage,
-  res: ServerResponse & { status: (n: number) => any; json: (b: unknown) => void },
-) {
+export default function handler(_req: any, res: any) {
   res.status(200).json({
     source: "ScholarshipTab",
     sourceUrl: "https://www.scholarshiptab.com/",
